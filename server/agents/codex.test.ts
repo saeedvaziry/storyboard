@@ -53,7 +53,7 @@ test('Codex arguments isolate tools, scope MCP calls, encode TOML and resume onl
     'features.shell_tool=false',
     'features.hooks=false',
     'features.multi_agent=false',
-    'web_search="disabled"',
+    'web_search="live"',
     'project_doc_max_bytes=0',
   ])
     assert.ok(args.includes(value), value);
@@ -70,6 +70,7 @@ test('Codex arguments isolate tools, scope MCP calls, encode TOML and resume onl
   assert.equal(args.at(-1), '-');
   assert.ok(!args.includes('a-session'));
   assert.deepEqual(codexArgs(turn({ resume: true })).slice(0, 3), ['exec', 'resume', 'a-session']);
+  assert.ok(codexArgs(turn({ resume: true })).includes('web_search="live"'));
   assert.ok(!codexArgs(turn({ model: 'default' })).includes('--model'));
 });
 

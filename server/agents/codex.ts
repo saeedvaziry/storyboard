@@ -102,7 +102,7 @@ export function codexArgs(turn: AgentTurn): string[] {
     developer_instructions: `${turn.systemPrompt}\n\nUse list_project_files, read_project_file, edit_project_file and write_project_file for project code. Discover Storyboard tools with tool_search if they are not exposed yet. Paths are relative to the project. Shell and apply_patch cannot edit files in this session; all changes go through the scoped Storyboard tools.`,
     project_doc_max_bytes: 0,
     project_root_markers: ['.storyboard-agent-root'],
-    web_search: 'disabled',
+    web_search: 'live',
     'agents.enabled': false,
     'skills.bundled.enabled': false,
     'skills.include_instructions': false,

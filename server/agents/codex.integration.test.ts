@@ -105,8 +105,11 @@ test(
         const body = JSON.parse(raw);
         assert.equal(body.model, 'gpt-5.5');
         const tools = body.tools.map((tool: { name?: string; type: string }) => tool.name ?? tool.type);
-        for (const tool of ['exec_command', 'shell', 'shell_command', 'spawn_agent', 'web_search', 'view_image'])
+        for (const tool of ['exec_command', 'shell', 'shell_command', 'spawn_agent', 'view_image'])
           assert.ok(!tools.includes(tool), `${tool} must remain disabled, including on resume`);
+        const web = body.tools.find((tool: { type: string }) => tool.type === 'web_search');
+        assert.ok(web, 'web search must be available, including on resume');
+        assert.equal(web.external_web_access, true, 'web access must be live, not cached');
         assert.ok(tools.includes('tool_search'));
         if (calls === 2) assert.match(JSON.stringify(body.input), /export default function Scene/);
         if (calls === 8) assert.match(JSON.stringify(body.input), /First Codex edit/);

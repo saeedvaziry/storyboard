@@ -54,7 +54,7 @@ export class ClaudeCodeProvider implements AgentProvider {
       turn.model,
       '--effort',
       turn.effort,
-      // No shell or web tools, file tools confined to the project folder, no permission bypass.
+      // Explicit tools (including web research), file tools confined to the project folder, no permission bypass.
       '--restricted',
       '--tools',
       turn.tools.join(','),

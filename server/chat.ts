@@ -200,7 +200,7 @@ export class ChatManager {
         resume,
         model: input.model!,
         effort: input.effort!,
-        tools: ['Read', 'Edit', 'Write', 'Glob', 'Grep'],
+        tools: ['Read', 'Edit', 'Write', 'Glob', 'Grep', 'WebSearch', 'WebFetch'],
         allow: allowRules(project, scene),
         mcpServers: {
           storyboard: {
@@ -322,7 +322,7 @@ export class ChatManager {
 function allowRules(p: ProjectState, scene: SceneState | null): string[] {
   // "//" marks an absolute path in Claude Code permission rules.
   const abs = (rel: string) => `//${path.join(p.dir, rel).replace(/^\/+/, '')}`;
-  const base = ['Read', 'Glob', 'Grep'];
+  const base = ['Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch'];
   if (scene) {
     const file = abs(`scenes/${scene.id}.tsx`);
     return [...base, `Edit(${file})`, `Write(${file})`, ...SCENE_TOOLS.map((t) => `mcp__storyboard__${t}`)];

@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { test, type TestContext } from 'node:test';
+import { scopeKey, type ChatScope } from '../../src/shared/types';
 import { ChatManager } from '../chat';
 import { ProjectStore } from '../projects';
 import { UndoStore } from '../undo';
@@ -46,13 +47,47 @@ async function fixture(t: TestContext) {
   } as unknown as ConstructorParameters<typeof ChatManager>[0];
   const chats = new ChatManager(deps);
   const scope = { kind: 'project' } as const;
-  const settled = async () => {
-    for (let i = 0; i < 500 && chats.isBusy(id, '_project'); i++) await delay(5);
-    assert.equal(chats.isBusy(id, '_project'), false, 'chat settled');
-    return chats.thread(id, scope);
+  const settled = async (target: ChatScope = scope) => {
+    for (let i = 0; i < 500 && chats.isBusy(id, scopeKey(target)); i++) await delay(5);
+    assert.equal(chats.isBusy(id, scopeKey(target)), false, 'chat settled');
+    return chats.thread(id, target);
   };
   return { chats, store, id, scope, turns, settled };
 }
+
+test('project and scene chats enable web research on new and resumed turns without widening file permissions', async (t) => {
+  const { chats, store, id, turns, settled } = await fixture(t);
+  const project = await store.get(id);
+  const scene = project.scenes[0];
+  const scopes: ChatScope[] = [{ kind: 'project' }, { kind: 'scene', sceneId: scene.id }];
+  for (const provider of ['claude-code', 'codex']) {
+    for (const scope of scopes) {
+      for (const resume of [false, true]) {
+        await chats.send(id, scope, { text: 'Check https://example.com before updating the video.', provider });
+        await settled(scope);
+        const turn = turns.at(-1)!.turn;
+        assert.equal(turn.resume, resume);
+        for (const tool of ['WebSearch', 'WebFetch']) {
+          assert.ok(turn.tools.includes(tool), `${tool} is exposed`);
+          assert.ok(turn.allow.includes(tool), `${tool} can run without prompting`);
+        }
+        assert.ok(!turn.tools.includes('Bash'));
+        assert.ok(!turn.allow.includes('Edit'));
+        assert.ok(!turn.allow.includes('Write'));
+        assert.match(turn.systemPrompt, /web.*tools/i);
+        assert.equal(turn.mcpServers.storyboard.headers?.['X-Storyboard-Scope'], scope.kind);
+        if (scope.kind === 'scene') {
+          const file = `//${scene.file.replace(/^\/+/, '')}`;
+          assert.deepEqual(
+            turn.allow.filter((rule) => /^(Edit|Write)\(/.test(rule)),
+            [`Edit(${file})`, `Write(${file})`],
+          );
+          assert.ok(!turn.allow.includes('mcp__storyboard__*'));
+        }
+      }
+    }
+  }
+});
 
 test('chat routes providers, resumes only same-provider sessions and retains context when switching', async (t) => {
   const { chats, store, id, scope, turns, settled } = await fixture(t);
