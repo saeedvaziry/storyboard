@@ -18,8 +18,8 @@ Inspired by [Caleb Porzio's tweet](https://x.com/calebporzio/status/210494547805
 You need macOS or Linux and [Node.js](https://nodejs.org) 22.12 or newer.
 
 ```bash
-git clone https://github.com/saeedvaziry/caleb-video-editor.git
-cd caleb-video-editor
+git clone https://github.com/saeedvaziry/storyboard.git
+cd storyboard
 ./storyboard setup
 ./storyboard start
 ```
