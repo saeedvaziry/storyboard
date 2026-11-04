@@ -60,15 +60,20 @@ export async function ensureUv(): Promise<boolean> {
   }
 }
 
-async function downloadUv(task: Task): Promise<void> {
-  const build = UV_BUILDS[`${process.platform}-${process.arch}`];
-  if (!build) throw new Error(`not available for ${process.platform}-${process.arch}`);
-  const url = `https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-${build.target}.tar.gz`;
-  const tmp = path.join(LOCAL_DIR, 'tmp');
-  fs.mkdirSync(tmp, { recursive: true });
-  const archive = path.join(tmp, `uv-${build.target}.tar.gz`);
+/**
+ * Download `url` to `file`, showing progress on `task`. Throws unless the file matches `sha256`.
+ * It gives up when no data arrives for `idleMs`, so a slow connection can still finish a large download.
+ */
+export async function downloadVerified(url: string, sha256: string, file: string, task: Task, idleMs = 60_000): Promise<void> {
+  const controller = new AbortController();
+  let idle: NodeJS.Timeout | undefined;
+  const alive = () => {
+    clearTimeout(idle);
+    idle = setTimeout(() => controller.abort(new Error('the download stalled')), idleMs);
+  };
+  alive();
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(5 * 60 * 1000) });
+    const res = await fetch(url, { signal: controller.signal });
     if (!res.ok || !res.body) throw new Error(`download failed (HTTP ${res.status})`);
     const total = Number(res.headers.get('content-length')) || null;
     const hash = createHash('sha256');
@@ -77,16 +82,30 @@ async function downloadUv(task: Task): Promise<void> {
       Readable.fromWeb(res.body as import('node:stream/web').ReadableStream),
       async function* (chunks: AsyncIterable<Buffer>) {
         for await (const chunk of chunks) {
+          alive();
           hash.update(chunk);
           received += chunk.length;
           task.progress(received, total);
           yield chunk;
         }
       },
-      fs.createWriteStream(archive),
+      fs.createWriteStream(file),
     );
-    const digest = hash.digest('hex');
-    if (digest !== build.sha256) throw new Error("the download didn't match its checksum, so it wasn't installed");
+    if (hash.digest('hex') !== sha256) throw new Error("the download didn't match its checksum, so it wasn't installed");
+  } finally {
+    clearTimeout(idle);
+  }
+}
+
+async function downloadUv(task: Task): Promise<void> {
+  const build = UV_BUILDS[`${process.platform}-${process.arch}`];
+  if (!build) throw new Error(`not available for ${process.platform}-${process.arch}`);
+  const url = `https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-${build.target}.tar.gz`;
+  const tmp = path.join(LOCAL_DIR, 'tmp');
+  fs.mkdirSync(tmp, { recursive: true });
+  const archive = path.join(tmp, `uv-${build.target}.tar.gz`);
+  try {
+    await downloadVerified(url, build.sha256, archive, task);
     const unpacked = path.join(tmp, `uv-${build.target}`);
     fs.rmSync(unpacked, { recursive: true, force: true });
     if ((await run('tar', ['-xzf', archive, '-C', tmp], { stdio: 'ignore' })) !== 0) throw new Error('unpacking failed');

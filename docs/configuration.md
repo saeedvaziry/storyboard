@@ -26,6 +26,7 @@ Set these when starting, e.g. `PORT=5299 ./storyboard start`. `HOST` and `PORT` 
 | `HOST` | setup choice, otherwise `127.0.0.1` | App bind IP address or `localhost` |
 | `PORT` | setup choice, otherwise `5199` | App port, 1–65535 |
 | `STORYBOARD_PROJECTS` | `./projects` | Where projects live |
+| `STORYBOARD_CHROMIUM_SANDBOX` | on (macOS) | `off` turns off headless Chromium's sandbox; only for a shell that is already sandboxed, where pages would otherwise crash |
 | `STORYBOARD_PROVIDER` | setup choice, otherwise first available (Claude Code first) | `claude-code` or `codex`; the editor can switch per message |
 | `STORYBOARD_MODEL` | selected provider's default | Model override for the default provider |
 | `STORYBOARD_CLAUDE_MODEL` | `claude-opus-5-5` | Claude Code's default model |

@@ -3,6 +3,7 @@
 // turning something off offers to remove its files. Everything it installs stays in the app folder.
 import fs from 'node:fs';
 import path from 'node:path';
+import { chromiumExecutable } from '../chromium';
 import { BASE_URL, CLAUDE_BIN, CODEX_BIN, HOST, MUSIC_DIR, PORT, reloadNetworkConfig, ROOT, SFX_DIR } from '../config';
 import { networkConfig, NETWORK_WARNING, networkExposed } from '../network';
 import { checkChromium, checkFfmpeg, claudeStatus } from '../doctor';
@@ -11,6 +12,7 @@ import type { AgentProviderId } from '../../src/shared/agents';
 import { engineInstalled } from '../music/engine';
 import { preferredProvider, readSettings, writeSettings, type Settings } from '../settings';
 import { sfxEngineInstalled, sfxModelDownloaded } from '../sound/engine';
+import { installChromium } from './chromium';
 import { installMusic, legacyMusic, musicNeeds, musicUnsupported, removeMusic } from './music';
 import { holdInput, releaseInput, setCancelHandler, withTerminal } from './input';
 import { isInteractive, multiselect, secret, select, type Choice } from './prompt';
@@ -272,18 +274,11 @@ async function ensureChromium(ask: boolean): Promise<boolean> {
   }
   const cli = path.join(ROOT, 'node_modules', 'playwright', 'cli.js');
   const task = new Task('Headless Chromium');
-  const step = await runStep(task, process.execPath, [cli, 'install', '--only-shell', 'chromium'], {
-    cwd: ROOT,
-    // "|■■■■       |  30% of 94.3 MiB"
-    onLine: (line) => {
-      const m = /(\d+)% of ([\d.]+) ([KMG])iB/.exec(line);
-      if (!m) return;
-      const total = Number(m[2]) * 1024 ** ' KMG'.indexOf(m[3]);
-      task.progress((Number(m[1]) / 100) * total, total);
-    },
-  });
-  if (step.code !== 0) {
-    stepFailed(task, 'download failed', step.tail);
+  try {
+    // Installed but not starting (missing system libraries, say): downloading it again wouldn't help.
+    if (!fs.existsSync(chromiumExecutable())) await installChromium(task);
+  } catch (e) {
+    task.fail((e as Error).message);
     return false;
   }
   check = await checkChromium();

@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { chromiumLaunchOptions } from './chromium';
 import { BASE_URL, CLAUDE_BIN, FFMPEG, HOST, MUSIC_URL, PORT, PROJECTS_DIR, ROOT, SFX_URL } from './config';
 import { engineHealth, engineInstalled, isLocalUrl } from './music/engine';
 import { preferredProvider, readSettings } from './settings';
@@ -60,16 +61,26 @@ export async function checkFfmpeg(): Promise<Check> {
 
 export async function checkChromium(): Promise<Check> {
   try {
-    // Imported here: config.ts has set PLAYWRIGHT_BROWSERS_PATH (the app folder) by now.
     const { chromium } = await import('playwright');
-    const browser = await chromium.launch();
-    const version = browser.version();
-    await browser.close();
-    return { level: 'ok', label: `Headless Chromium ${version}` };
+    const browser = await chromium.launch(chromiumLaunchOptions());
+    try {
+      // Open a page too: with the sandbox nested inside another one, Chromium starts but every page crashes.
+      await browser.newPage();
+      return { level: 'ok', label: `Headless Chromium ${browser.version()}` };
+    } finally {
+      await browser.close();
+    }
   } catch (e) {
     const message = (e as Error).message;
     if (/Executable doesn't exist/i.test(message)) {
       return { level: 'fail', label: 'Headless Chromium is not installed', fix: './storyboard setup' };
+    }
+    if (/Target crashed/i.test(message)) {
+      return {
+        level: 'fail',
+        label: 'Headless Chromium crashes when it opens a page',
+        fix: 'If this shell is itself sandboxed, set STORYBOARD_CHROMIUM_SANDBOX=off',
+      };
     }
     return {
       level: 'fail',

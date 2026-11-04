@@ -4,9 +4,9 @@ import fs from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
+import { chromiumExecutable } from '../chromium';
 import {
   BASE_URL,
-  BROWSERS_DIR,
   HOST,
   LOG_DIR,
   MUSIC_DIR,
@@ -227,7 +227,7 @@ async function launch(id: ServiceId): Promise<Launch> {
 
 function hasChromium(): boolean {
   try {
-    return fs.readdirSync(process.env.PLAYWRIGHT_BROWSERS_PATH ?? BROWSERS_DIR).some((d) => d.startsWith('chromium'));
+    return fs.existsSync(chromiumExecutable());
   } catch {
     return false;
   }

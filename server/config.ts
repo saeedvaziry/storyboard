@@ -22,8 +22,6 @@ export const LOG_DIR = path.join(LOCAL_DIR, 'logs');
 export const RUN_DIR = path.join(LOCAL_DIR, 'run');
 export const KEYS_DIR = path.join(LOCAL_DIR, 'keys');
 export const BROWSERS_DIR = path.join(LOCAL_DIR, 'browsers');
-// Playwright reads this once, when it loads; capture.ts and doctor.ts import Playwright lazily, after this ran.
-process.env.PLAYWRIGHT_BROWSERS_PATH ||= BROWSERS_DIR;
 
 /** Music engine (ACE-Step's REST API). Local by default; point it at another machine later. */
 export const MUSIC_URL = (process.env.STORYBOARD_MUSIC_URL ?? 'http://127.0.0.1:8001').replace(/\/+$/, '');

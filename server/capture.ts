@@ -3,6 +3,7 @@ import type { Browser, BrowserContext, Page } from 'playwright';
 import { PNG } from 'pngjs';
 import type { FrameRenderResult } from '../src/shared/frameApi';
 import type { SoundReport } from '../src/shared/types';
+import { chromiumLaunchOptions } from './chromium';
 import { AGENT_FRAME_QUALITY, AGENT_FRAME_SCALE, BASE_URL } from './config';
 import type { ProjectStore } from './projects';
 import { KeyedMutex } from './util';
@@ -45,10 +46,10 @@ export class Capturer {
 
   browser(): Promise<Browser> {
     if (!this.browserPromise) {
-      // Imported here, not at the top: config.ts must set PLAYWRIGHT_BROWSERS_PATH (the app folder) before Playwright loads.
       this.browserPromise = import('playwright')
         .then(({ chromium }) =>
           chromium.launch({
+            ...chromiumLaunchOptions(),
             args: [
               '--force-color-profile=srgb',
               '--disable-lcd-text',
